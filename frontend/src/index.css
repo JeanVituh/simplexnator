@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 25% 97%; --foreground: 224 30% 11%; --card: 0 0% 100%;
+    --muted: 220 20% 95%; --muted-foreground: 220 9% 38%; --border: 220 16% 90%;
+    --primary: 240 62% 52%; --primary-foreground: 0 0% 100%; --primary-soft: 240 90% 96%;
+    --success: 162 82% 26%; --success-soft: 160 70% 93%;
+    --warn: 28 92% 34%; --warn-soft: 42 95% 92%;
+    --danger: 2 70% 44%; --danger-soft: 2 90% 96%;
+    --ring: 240 62% 52%; --radius: 0.8rem;
+    --shadow-card: 0 1px 2px hsl(224 30% 11% / 0.04), 0 2px 8px hsl(224 30% 11% / 0.04);
+    --shadow-pop: 0 10px 30px hsl(224 30% 11% / 0.12);
+  }
+  .dark {
+    --background: 228 30% 6%; --foreground: 220 20% 95%; --card: 228 24% 9.5%;
+    --muted: 228 20% 14%; --muted-foreground: 222 12% 66%; --border: 228 16% 17%;
+    --primary: 238 92% 76%; --primary-foreground: 228 40% 8%; --primary-soft: 238 40% 17%;
+    --success: 162 70% 50%; --success-soft: 162 50% 12%;
+    --warn: 32 95% 62%; --warn-soft: 32 55% 13%;
+    --danger: 4 90% 68%; --danger-soft: 4 50% 14%;
+    --ring: 238 92% 76%;
+    --shadow-card: 0 1px 2px hsl(0 0% 0% / 0.4);
+    --shadow-pop: 0 12px 32px hsl(0 0% 0% / 0.5);
+  }
+  * { @apply border-border; }
+  html { scroll-behavior: smooth; }
+  body { @apply bg-background font-sans text-[15px] text-foreground antialiased; font-feature-settings: 'cv11', 'ss01'; }
+  :focus-visible { @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background; }
+  ::selection { @apply bg-primary/20; }
+}
+
+@layer components {
+  /* Tabelas matemáticas */
+  .tbl { @apply w-full border-separate border-spacing-0 font-mono text-[13px] tabular-nums; }
+  .tbl th, .tbl td { @apply whitespace-nowrap border-b border-border px-3 py-2 text-center; }
+  .tbl thead th { @apply bg-muted/60 text-[12.5px] font-semibold text-muted-foreground; }
+  .tbl tbody th { @apply bg-muted/40 text-left font-semibold; }
+  .tbl tbody tr:last-child td, .tbl tbody tr:last-child th { @apply border-b-0; }
+  .tbl-plain th, .tbl-plain td { @apply font-sans; }
+  .eyebrow { @apply text-xs font-semibold uppercase tracking-[0.14em] text-primary; }
+  .kbd-label { @apply text-xs font-medium text-muted-foreground; }
+}
+
+@media print {
+  aside, header.app-bar, .no-print { display: none !important; }
+  main { padding: 0 !important; }
+  body { background: white; color: black; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

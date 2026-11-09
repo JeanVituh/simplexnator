@@ -1,0 +1,14 @@
+# Backend FastAPI na Render (alternativas: Railway, Fly.io). O frontend é publicado na Vercel.
+services:
+  - type: web
+    name: simplexnator-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: CORS_ORIGINS
+        value: https://SEU-PROJETO.vercel.app
+      - key: PYTHON_VERSION
+        value: 3.12.3

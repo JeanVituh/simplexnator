@@ -1,0 +1,6 @@
+-r requirements.txt
+pytest>=8.0
+httpx>=0.27
+# Validação independente (opcional): os testes que usam SciPy são ignorados se ele não estiver instalado.
+scipy>=1.11
+numpy>=1.26
