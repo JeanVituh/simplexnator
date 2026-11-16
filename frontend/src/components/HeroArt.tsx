@@ -11,7 +11,7 @@ export default function HeroArt() {
       <g className="stroke-muted-foreground/50" strokeWidth="1.5" strokeDasharray="5 5" fill="none">
         <path d="M60 30 360 210" /><path d="M20 70 320 250" /><path d="M110 18 380 180" />
       </g>
-      <path d="M95 15 380 190" className="stroke-success" strokeWidth="2.5" strokeDasharray="7 5" fill="none" />
+      <path d="M193 20 380 134.825" className="stroke-success" strokeWidth="2.5" strokeDasharray="7 5" fill="none" />
       {[[40, 150], [120, 70], [330, 130], [290, 270], [40, 270]].map(([x, y]) => <circle key={`${x}-${y}`} cx={x} cy={y} r="4.5" className="fill-card stroke-foreground" strokeWidth="2" />)}
       <g transform="translate(250 55)">
         <circle r="6" className="origin-center animate-pulse-ring fill-success/40" style={{ transformBox: 'fill-box' }} />
