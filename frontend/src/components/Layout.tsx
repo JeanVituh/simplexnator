@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { ChartLine, ChevronsLeft, ClipboardCheck, FolderOpen, GitFork, House, Moon, PencilRuler, Sun, Table2, ArrowLeftRight } from 'lucide-react'
+import { ChartLine, ChevronsLeft, ClipboardCheck, FolderOpen, GitFork, House, Moon, PencilRuler, Sun, Table2, ArrowLeftRight, UserRound } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useApp } from '@/store'
 import { LogoMark } from '@/components/Logo'
@@ -14,7 +14,7 @@ const groups: { title: string; items: { to: string; label: string; icon: LucideI
   { title: 'Análise', items: [
     { to: '/resolucao', label: 'Resolução', icon: Table2, needsResult: true }, { to: '/graficos', label: 'Gráficos', icon: ChartLine, needsResult: true },
     { to: '/inteira', label: 'Solução inteira', icon: GitFork, needsResult: true }, { to: '/dual', label: 'Dual', icon: ArrowLeftRight, needsResult: true } ] },
-  { title: 'Saídas', items: [{ to: '/resultados', label: 'Resultados', icon: ClipboardCheck, needsResult: true }, { to: '/projetos', label: 'Projetos', icon: FolderOpen }] },
+  { title: 'Saídas', items: [{ to: '/resultados', label: 'Resultados', icon: ClipboardCheck, needsResult: true }, { to: '/projetos', label: 'Projetos', icon: FolderOpen }, { to: '/conta', label: 'Conta', icon: UserRound }] },
 ]
 
 function StatusCard({ open }: { open: boolean }) {

@@ -1,0 +1,47 @@
+rules_version = '2';
+
+// Simplexnator — regras do Cloud Firestore.
+// Cada usuário autenticado lê e grava SOMENTE em users/{seu uid}/projects/*.
+// Todo o resto do banco é negado por padrão.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // Estrutura permitida para um projeto. Os resultados vão em `resultJson` (texto) porque o
+    // Firestore não aceita arrays dentro de arrays; o limite abaixo protege o teto de 1 MiB por documento.
+    function validProject(uid) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['name', 'problem', 'method', 'integer', 'resultJson', 'resultOmitted', 'schemaVersion', 'ownerId', 'createdAt', 'updatedAt'])
+        && d.keys().hasAll(['name', 'problem', 'method', 'integer', 'schemaVersion', 'ownerId', 'createdAt', 'updatedAt'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 120
+        && d.problem is map
+        && d.method in ['bigm', 'twophase']
+        && d.integer in ['none', 'marked', 'all']
+        && d.schemaVersion == 2
+        && d.ownerId == uid
+        && d.createdAt is timestamp
+        && d.updatedAt == request.time
+        && (!('resultJson' in d) || d.resultJson == null || (d.resultJson is string && d.resultJson.size() <= 950000))
+        && (!('resultOmitted' in d) || d.resultOmitted is bool);
+    }
+
+    match /users/{uid}/projects/{projectId} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && validProject(uid) && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(uid) && validProject(uid) && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isOwner(uid);
+    }
+
+    // Negado por padrão: nenhum outro caminho é acessível.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

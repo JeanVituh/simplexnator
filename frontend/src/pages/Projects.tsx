@@ -1,46 +1,43 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Download, FolderOpen, History, Trash2, Upload } from 'lucide-react'
+import { Download, FileArchive, FileJson, FolderOpen, History, Trash2, Upload } from 'lucide-react'
 import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Section } from '@/components/ui/card'
-import { downloadJson } from '@/lib/download'
+import { Spinner } from '@/components/ui/spinner'
 import { sizeLabel } from '@/lib/model'
-import type { Problem } from '@/lib/types'
+import { useProjectIO } from '@/lib/useProjectIO'
 import { useApp } from '@/store'
 
-const isProblem = (p: unknown): p is Problem => {
-  const q = p as Problem
-  return !!q && (q.sense === 'max' || q.sense === 'min') && Array.isArray(q.objective) && Array.isArray(q.variables) && Array.isArray(q.constraints)
-}
-
 export default function Projects() {
-  const { problem, loadProblem, history, removeHistory, clearHistory, setMethod, setInteger } = useApp()
+  const { loadProblem, history, removeHistory, clearHistory, setMethod, setInteger } = useApp()
+  const io = useProjectIO()
   const nav = useNavigate()
   const file = useRef<HTMLInputElement>(null)
   const [msg, setMsg] = useState<string | null>(null)
 
   const onFile = async (f?: File) => {
     if (!f) return
-    try {
-      const data = JSON.parse(await f.text())
-      const p = isProblem(data) ? data : isProblem(data?.problem) ? data.problem : null
-      if (!p) throw new Error('O arquivo não contém um problema de programação linear válido.')
-      loadProblem(p); nav('/entrada')
-    } catch (e) { setMsg(e instanceof SyntaxError ? 'O arquivo não é um JSON válido.' : e instanceof Error ? e.message : 'Arquivo inválido.') }
+    setMsg(null)
+    const r = await io.importFile(f)
+    if (r.ok) nav(r.to); else setMsg(r.error)
   }
   return (
     <div>
-      <PageHeader eyebrow="Saídas" title="Projetos e histórico" subtitle="Exporte o modelo atual em JSON, importe de volta e reabra resoluções anteriores. O histórico fica salvo neste navegador." />
-      <div className="grid items-start gap-5 lg:grid-cols-[340px_1fr]">
-        <Section title="Arquivos" description="Importe um problema ou um projeto completo exportado pelo Simplexnator.">
+      <PageHeader eyebrow="Saídas" title="Projetos e histórico" subtitle="Exporte o modelo e os resultados em JSON ou em um pacote ZIP com os gráficos, importe de volta e reabra resoluções anteriores. O histórico fica salvo neste navegador." />
+      <div className="grid items-start gap-5 lg:grid-cols-[360px_1fr]">
+        <Section title="Arquivos" description="Importe JSON (versões 1.1 e 1.2) ou ZIP gerado pelo Simplexnator.">
           <div className="space-y-3">
             <button type="button" onClick={() => file.current?.click()} className="flex w-full flex-col items-center gap-2 rounded-xl border border-dashed px-4 py-7 text-sm text-muted-foreground transition-colors hover:border-primary hover:bg-primary-soft/50 hover:text-primary">
-              <Upload size={22} /><span className="font-medium">Importar arquivo JSON</span><span className="text-xs">problema ou projeto completo</span>
+              <Upload size={22} /><span className="font-medium">Importar arquivo</span><span className="text-xs">.json ou .zip do Simplexnator</span>
             </button>
-            <input ref={file} type="file" accept="application/json,.json" hidden aria-label="Importar arquivo JSON" onChange={(e) => { void onFile(e.target.files?.[0]); e.target.value = '' }} />
-            <Button variant="outline" className="w-full" onClick={() => downloadJson(`${(problem.name || 'problema').replace(/\s+/g, '-').toLowerCase()}.json`, { problem })}><Download size={15} />Exportar problema atual</Button>
+            <input ref={file} type="file" accept="application/json,.json,application/zip,.zip" hidden aria-label="Importar arquivo" onChange={(e) => { void onFile(e.target.files?.[0]); e.target.value = '' }} />
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+              <Button variant="outline" onClick={io.exportJson}><FileJson size={15} />Exportar JSON</Button>
+              <Button variant="outline" disabled={io.busy} onClick={() => void io.exportZip()}>{io.busy ? <Spinner /> : <FileArchive size={15} />}Exportar ZIP</Button>
+            </div>
+            <p className="text-xs leading-relaxed text-muted-foreground">O ZIP contém <span className="font-mono">projeto.json</span>, os gráficos em PNG (problemas de 2 variáveis já resolvidos) e um <span className="font-mono">README.txt</span>. {io.hasResult ? 'O resultado atual será incluído.' : 'Resolva o problema para incluir resultados e gráficos.'}</p>
             {msg && <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">{msg}</p>}
           </div>
         </Section>
@@ -63,6 +60,7 @@ export default function Projects() {
           )}
         </Section>
       </div>
+      <p className="mt-4 flex items-center gap-1.5 px-1 text-xs text-muted-foreground"><Download size={13} />Com uma conta, os projetos também podem ser salvos na nuvem (página Conta).</p>
     </div>
   )
 }

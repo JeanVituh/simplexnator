@@ -13,6 +13,16 @@ const API = import.meta.env.VITE_API_URL as string | undefined
 const link = (name: string) => screen.getAllByRole('link', { name })[0]
 
 describe.skipIf(!API)('integração frontend ↔ backend (servidor real)', () => {
+  // Aguarda o servidor responder (até 30 s); se não subir, falha com uma mensagem clara em vez de um erro de conexão confuso.
+  beforeAll(async () => {
+    const t0 = Date.now()
+    for (;;) {
+      try { if ((await fetch(`${API}/api/health`)).ok) return } catch { /* ainda subindo */ }
+      if (Date.now() - t0 > 30000) throw new Error(`O backend não respondeu em ${API}/api/health. Inicie o FastAPI antes de rodar a integração.`)
+      await new Promise((r) => setTimeout(r, 500))
+    }
+  }, 35000)
+
   it('resolve o Problema Radioterápico pela interface e confere com a resposta do servidor', async () => {
     const examples = await (await fetch(`${API}/api/examples`)).json()
     const radio = examples.find((e: { id: string }) => e.id === 'radioterapico')

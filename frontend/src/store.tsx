@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { solveProblem } from '@/lib/api'
 import { dec } from '@/lib/format'
-import type { Example, ExampleContext, HistoryItem, IntegerMode, Method, Problem, SolveResponse } from '@/lib/types'
+import type { Example, ExampleContext, HistoryItem, IntegerMode, Method, Problem, ProjectRef, SolveResponse } from '@/lib/types'
+import type { ProjectPayload } from '@/lib/project'
 import { useToast } from '@/components/ui/toast'
 
 export const emptyProblem = (): Problem => ({
@@ -19,6 +20,8 @@ interface Ctx {
   loading: boolean; error: string | null
   solve: (p?: Problem) => Promise<boolean>
   newProblem: () => void; loadProblem: (p: Problem) => void; loadExample: (e: Example) => void
+  restoreProject: (payload: ProjectPayload, ref?: ProjectRef | null) => void
+  binding: ProjectRef | null; setBinding: (b: ProjectRef | null) => void; solveCount: number
   context: ExampleContext | null
   history: HistoryItem[]; removeHistory: (id: string) => void; clearHistory: () => void
   dark: boolean; toggleTheme: () => void
@@ -48,6 +51,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [result, setResult] = useState<SolveResponse | null>(null)
   const [solvedProblem, setSolved] = useState<Problem | null>(null)
   const [context, setContext] = useState<ExampleContext | null>(null)
+  const [binding, setBinding] = useState<ProjectRef | null>(null)
+  const [solveCount, setSolveCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [history, setHistory] = useState<HistoryItem[]>(readHistory)
@@ -65,7 +70,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLoading(true); setError(null)
     try {
       const r = await solveProblem(prob, method, integer)
-      setResult(r); setSolved(clone(prob))
+      setResult(r); setSolved(clone(prob)); setSolveCount((c) => c + 1)
       const z = r.relaxation.z
       const summary = r.relaxation.status === 'optimal' && z ? `Z* = ${dec(z.value)}` : r.relaxation.status === 'infeasible' ? 'Inviável' : 'Ilimitado'
       setHistory((h) => [{ id: crypto.randomUUID(), date: new Date().toISOString(), problem: clone(prob), method, integer, summary }, ...h])
@@ -79,16 +84,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } finally { setLoading(false) }
   }, [problem, method, integer, toast])
 
-  const loadProblem = useCallback((p: Problem) => { setProblem(clone(p)); setResult(null); setSolved(null); setError(null); setContext(null) }, [])
+  const loadProblem = useCallback((p: Problem) => { setProblem(clone(p)); setResult(null); setSolved(null); setError(null); setContext(null); setBinding(null) }, [])
+  const restoreProject = useCallback((pl: ProjectPayload, ref?: ProjectRef | null) => {
+    setProblem(clone(pl.problem)); setMethod(pl.method); setInteger(pl.integer); setResult(pl.result)
+    setSolved(pl.result ? clone(pl.problem) : null); setContext(null); setError(null); setBinding(ref ?? null)
+  }, [])
   const newProblem = useCallback(() => loadProblem(emptyProblem()), [loadProblem])
   const loadExample = useCallback((e: Example) => { loadProblem(e.problem); setContext(e.context ?? null) }, [loadProblem])
   const stale = !!result && !!solvedProblem && JSON.stringify(problem) !== JSON.stringify(solvedProblem)
 
   const value = useMemo<Ctx>(() => ({
     problem, setProblem, method, setMethod, integer, setInteger, result, solvedProblem, stale, loading, error, solve,
-    newProblem, loadProblem, loadExample, context,
+    newProblem, loadProblem, loadExample, restoreProject, binding, setBinding, solveCount, context,
     history, removeHistory: (id) => setHistory((h) => h.filter((x) => x.id !== id)), clearHistory: () => setHistory([]),
     dark, toggleTheme: () => setDark((d) => !d), showFrac, setShowFrac,
-  }), [problem, method, integer, result, solvedProblem, stale, loading, error, solve, newProblem, loadProblem, loadExample, context, history, dark, showFrac])
+  }), [problem, method, integer, result, solvedProblem, stale, loading, error, solve, newProblem, loadProblem, loadExample, restoreProject, binding, solveCount, context, history, dark, showFrac])
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>
 }

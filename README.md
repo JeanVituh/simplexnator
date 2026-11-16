@@ -11,16 +11,17 @@ O cálculo é feito no backend, em **Python com aritmética exata (frações)**;
 | **Entrada** | Maximizar/minimizar; variáveis contínuas, inteiras ou binárias; limites inferior e superior (ou variável livre); restrições ≤, ≥ e =; adicionar/remover variáveis e restrições; validação do formulário; prévia da formulação. |
 | **Resolução** | Simplex tabular com **Big-M** ou **Duas Fases**; forma padrão; pivô, variáveis que entram/saem, razões, operações de linha e custos reduzidos em cada iteração; navegação passo a passo, modo automático e frações exatas. Detecta inviabilidade, ilimitabilidade, degenerescência (regra de Bland contra ciclagem) e soluções múltiplas. |
 | **Gráficos** | Região viável, retas das restrições, curvas de nível, vértices com Z, ótimo contínuo, pontos inteiros e solução inteira (Plotly interativo, camadas ativáveis). Para 2 variáveis. |
-| **Solução inteira** | Ótimo contínuo, arredondamento simples (com verificação de viabilidade), melhor combinação piso/teto viável e **Branch and Bound** com árvore, ramificações, podas e motivo de encerramento. |
+| **Solução inteira** | Ótimo contínuo, arredondamento simples (com verificação de viabilidade), melhor combinação piso/teto viável e **Branch and Bound** com indicadores numéricos, tabela completa dos nós, **tableau final de cada nó** (iterações completas sob demanda), **Tabela Simplex da Solução Inteira Ótima**, árvore, ramificações, podas e motivo de encerramento. |
 | **Dual** | Construção do dual, correspondência primal ↔ dual, **resolução do dual em tabelas Simplex (todas as iterações)** e conferência da dualidade forte (Z = W). |
 | **Soluções múltiplas** | Detecção (custo reduzido nulo em variável não básica), geração de vértices alternativos por pivoteamento, confirmação do mesmo Z e segmento destacado no gráfico. |
-| **Resultados / Projetos** | Resumo, comparação entre soluções, preços-sombra e faixas de sensibilidade; exportar/importar JSON; histórico local; impressão/PDF pelo navegador; tema claro e escuro. |
+| **Resultados / Projetos** | Resumo (inclui o Branch and Bound), comparação entre soluções, preços-sombra e faixas de sensibilidade; exportar/importar **JSON** e **ZIP** (com os gráficos em PNG gerados pelo Plotly); histórico local; impressão/PDF pelo navegador; tema claro e escuro. |
+| **Conta e repositório** *(opcional)* | Cadastro, login, logout e recuperação de senha com Firebase Authentication; projetos salvos na nuvem (Cloud Firestore) com regras de segurança por usuário. Sem configuração do Firebase, o sistema funciona normalmente sem contas. Veja `docs/CONFIGURAR_FIREBASE.md`. |
 
 O motor é genérico: **qualquer modelo digitado em Entrada é resolvido**, sem alterar código. Limites padrão: 12 variáveis e 20 restrições (configuráveis).
 
 ## Tecnologias
 
-- **Frontend:** React 19, TypeScript 6, Vite 8, Tailwind CSS 3.4, componentes no estilo shadcn/ui (Radix UI + class-variance-authority), Plotly.js (`plotly.js-dist-min` 4.2), React Router 7, Vitest 5 + Testing Library.
+- **Frontend:** React 19, TypeScript 6, Vite 8, Tailwind CSS 3.4, componentes no estilo shadcn/ui (Radix UI + class-variance-authority), Plotly.js (`plotly.js-dist-min` 4.2), React Router 7, JSZip 3 (pacotes ZIP), Firebase 12 (Authentication e Firestore, carregados sob demanda), Vitest 5 + Testing Library.
 - **Backend:** Python, FastAPI, Pydantic, Uvicorn, python-dotenv. O motor usa apenas a biblioteca padrão (`fractions`, `dataclasses`).
 - **Testes de validação independente (opcional):** SciPy/NumPy.
 
@@ -85,6 +86,21 @@ npm run dev
 ```
 Abra **http://localhost:5173**. Em produção, defina `VITE_API_URL` com a URL pública do backend.
 
+## Variáveis de ambiente
+
+| Onde | Variável | Uso |
+|---|---|---|
+| backend | `CORS_ORIGINS`, `MAX_VARIABLES`, `MAX_CONSTRAINTS`, `BB_NODE_LIMIT` | origens permitidas e limites do motor |
+| backend | `BB_TABLEAU_LIMIT` | quantos nós do Branch and Bound recebem o tableau final na resposta (padrão 150) |
+| frontend | `VITE_API_URL` | URL pública do backend em produção |
+| frontend | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID` | configuração **pública** do app Web do Firebase (opcional). Nunca use chaves privadas no frontend. |
+
+## Exportação e importação
+
+- **Exportar JSON:** formato do Simplexnator v2 (`format: "simplexnator-project"`), que continua contendo `problem` e `result` e por isso é legível também pela versão 1.1.
+- **Exportar ZIP:** `projeto.json`, pasta `graficos/` (PNG gerados pelo Plotly a partir da visualização real, para problemas de 2 variáveis já resolvidos) e `README.txt`.
+- **Importar:** aceita JSON da v1.1, JSON da v1.2 e ZIP do Simplexnator. Os arquivos são validados; do ZIP só se lê `projeto.json` (nenhum outro caminho é extraído) e caminhos com `..`, absolutos ou com `\` são recusados.
+
 ## Testes e verificações
 
 ```powershell
@@ -138,9 +154,9 @@ Para atualizar: `git pull`. Para trabalhar em ramos: `git checkout -b minha-alte
 - O gráfico 2D exige exatamente 2 variáveis; com mais variáveis a resolução continua completa nas tabelas.
 - O dual é construído a partir do primal na forma padrão (variáveis ≥ 0; limites superiores viram restrições; variáveis duais ≤ 0 ou livres entram por substituição). O Simplex Dual como método independente não foi implementado: o dual é resolvido pelo Simplex tabular.
 - Faixas de sensibilidade dos coeficientes não são calculadas quando há variáveis deslocadas (limite inferior ≠ 0) ou livres.
-- A árvore do Branch and Bound mostra resultado, ramificação e motivo de cada nó; as tabelas Simplex individuais de cada nó não são exibidas.
+- Branch and Bound: o tableau final vem na resposta apenas para os primeiros `BB_TABLEAU_LIMIT` nós (150 por padrão) e para o nó incumbente; as iterações completas de qualquer nó são consultadas sob demanda (`POST /api/bb/node`). A busca é em profundidade e há um limite de nós (2000 por padrão); ao atingi-lo, a otimalidade inteira **não** é declarada comprovada.
 - O relatório PDF usa a impressão do navegador (Salvar como PDF).
-- Sem autenticação, armazenamento em nuvem ou gráfico 3D. O histórico é salvo no navegador (localStorage).
+- Contas e projetos na nuvem dependem de um projeto Firebase configurado pelo administrador (`docs/CONFIGURAR_FIREBASE.md`); as regras do Firestore devem ser publicadas e testadas no ambiente real. Resultados maiores que ~900 mil caracteres não são gravados na nuvem (apenas modelo e configurações). Sem gráfico 3D. O histórico local é salvo no navegador (localStorage).
 - As fontes (Geist) são carregadas do Google Fonts; sem internet a interface usa a fonte do sistema.
 
 ## Procedência do exemplo radioterápico
