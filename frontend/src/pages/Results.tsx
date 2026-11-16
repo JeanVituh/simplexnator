@@ -1,11 +1,14 @@
-import { ClipboardCheck, Download, Printer } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ClipboardCheck, FileArchive, FileJson, Printer } from 'lucide-react'
 import { Empty, PageHeader } from '@/components/PageHeader'
 import { Stat } from '@/components/IterationViewer'
 import { StatusBanner } from '@/components/StatusBanner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, Section } from '@/components/ui/card'
-import { downloadJson } from '@/lib/download'
+import { BBIndicators } from '@/components/BranchBound'
+import { Spinner } from '@/components/ui/spinner'
+import { useProjectIO } from '@/lib/useProjectIO'
 import { fmtNum, point } from '@/lib/format'
 import { useApp } from '@/store'
 
@@ -15,6 +18,7 @@ const Kpi = ({ label, value, sub }: { label: string; value: string; sub?: string
 
 export default function Results() {
   const { result: r, solvedProblem: p, showFrac, setShowFrac } = useApp()
+  const io = useProjectIO()
   if (!r || !p) return <Empty icon={ClipboardCheck} title="Sem resultados" text="Resolva um problema para ver o resumo da solução, a comparação entre soluções e a análise de sensibilidade." to="/entrada" cta="Ir para a Entrada" />
   const rel = r.relaxation, v = rel.validation, s = r.sensitivity
   const intInfo = r.integer.available === false ? null : r.integer
@@ -26,7 +30,8 @@ export default function Results() {
     <div className="space-y-5">
       <PageHeader eyebrow="Saídas" title="Resultados" subtitle={p.name}>
         <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground"><input type="checkbox" className="accent-[hsl(var(--primary))]" checked={showFrac} onChange={(e) => setShowFrac(e.target.checked)} />Frações exatas</label>
-        <Button variant="outline" onClick={() => downloadJson('simplexnator-projeto.json', { problem: p, result: r })}><Download size={15} />Exportar JSON</Button>
+        <Button variant="outline" onClick={io.exportJson}><FileJson size={15} />Exportar JSON</Button>
+        <Button variant="outline" disabled={io.busy} onClick={() => void io.exportZip()}>{io.busy ? <Spinner /> : <FileArchive size={15} />}Exportar ZIP</Button>
         <Button onClick={() => window.print()}><Printer size={15} />Imprimir / PDF</Button>
       </PageHeader>
       <StatusBanner status={rel.status} message={rel.message} />
@@ -38,6 +43,12 @@ export default function Results() {
         <Kpi label="Z inteiro ótimo" value={inc ? fmtNum(inc.z, showFrac) : '—'} sub={inc ? `x = ${point(inc.x, showFrac)}` : 'não calculado'} />
         <Kpi label="Processamento" value={`${rel.pivots} ${rel.pivots === 1 ? 'pivô' : 'pivôs'}`} sub={intInfo ? `${intInfo.branch_and_bound.explored} nós no Branch and Bound` : undefined} />
       </div>
+
+      {intInfo?.branch_and_bound.stats && (
+        <Section title="Branch and Bound" description="Resumo da busca pela solução inteira ótima." actions={<Link to="/inteira" className="text-sm font-medium text-primary hover:underline">Ver tabela de nós e tableaus</Link>}>
+          <BBIndicators bb={intInfo.branch_and_bound} sense={r.sense} frac={showFrac} compact />
+        </Section>
+      )}
 
       {rel.status === 'optimal' && rel.x && (
         <div className="grid gap-5 lg:grid-cols-2">

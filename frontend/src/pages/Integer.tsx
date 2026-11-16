@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from 'react'
 import { GitFork } from 'lucide-react'
 import { Empty, PageHeader } from '@/components/PageHeader'
 import { Stat } from '@/components/IterationViewer'
+import { BBIndicators, BBNodeTable, DECISION_META, IncumbentSection } from '@/components/BranchBound'
 import { LayerChips } from '@/pages/Graphs'
 import { Badge } from '@/components/ui/badge'
 import { Section } from '@/components/ui/card'
@@ -14,24 +15,16 @@ import { cn } from '@/lib/utils'
 
 const PlotGraph = lazy(() => import('@/components/PlotGraph'))
 
-const DECISION = {
-  branched: { tone: 'default', label: 'ramificado', bar: 'border-l-primary' },
-  integer: { tone: 'success', label: 'solução inteira', bar: 'border-l-success' },
-  infeasible: { tone: 'danger', label: 'inviável', bar: 'border-l-danger' },
-  unbounded: { tone: 'danger', label: 'ilimitado', bar: 'border-l-danger' },
-  pruned_bound: { tone: 'warn', label: 'podado por limite', bar: 'border-l-warn' },
-} as const
-
 function Tree({ node, all, frac }: { node: BBNode; all: BBNode[]; frac: boolean }) {
   const kids = all.filter((n) => n.parent === node.id)
-  const d = node.decision ? DECISION[node.decision] : null
+  const d = node.decision ? DECISION_META[node.decision] : null
   return (
     <li>
       <div className={cn('relative mb-2.5 rounded-lg border border-l-4 bg-card p-3 text-sm shadow-card', d?.bar, node.parent !== null && 'before:absolute before:-left-[17px] before:top-5 before:h-px before:w-4 before:bg-border')}>
         <div className="flex flex-wrap items-center gap-2">
           <span className="font-mono font-semibold">Nó {node.id}</span>
           <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{node.branch}</span>
-          {d && <Badge variant={d.tone}>{d.label}</Badge>}
+          {d && <Badge variant={d.tone}>{d.label.toLowerCase()}</Badge>}
           {node.z && <span className="font-mono text-xs text-muted-foreground">Z = {fmtNum(node.z, frac)}</span>}
           {node.x && <span className="font-mono text-xs text-muted-foreground">x = {point(node.x, frac)}</span>}
         </div>
@@ -62,7 +55,7 @@ const RoundBox = ({ title, r, frac }: { title: string; r: Rounding | null; frac:
 )
 
 export default function IntegerPage() {
-  const { result: res, showFrac, setShowFrac } = useApp()
+  const { result: res, solvedProblem, showFrac, setShowFrac } = useApp()
   const [layers, setLayers] = useState<Layers>({ region: true, constraints: true, levels: false, vertices: false, ints: true, optimum: true, intOpt: true, rounding: true, segment: false })
   if (!res) return <Empty icon={GitFork} title="Nenhuma solução inteira ainda" text="Resolva um problema para comparar arredondamento e Branch and Bound." to="/entrada" cta="Ir para a Entrada" />
   const info = res.integer
@@ -92,6 +85,12 @@ export default function IntegerPage() {
         {gap !== null && <p className="mt-3 text-sm text-muted-foreground">Diferença entre o ótimo inteiro e o contínuo: <b className="font-mono text-foreground">{gap.toFixed(4).replace(/\.?0+$/, '').replace('.', ',') || '0'}</b> · {bb.explored} nós explorados no Branch and Bound.</p>}
       </Section>
 
+      {bb.stats ? (
+        <Section title="Indicadores do Branch and Bound" description="Calculados a partir da execução real do algoritmo.">
+          <BBIndicators bb={bb} sense={res.sense} frac={showFrac} />
+        </Section>
+      ) : <Section title="Branch and Bound"><p className="text-sm text-muted-foreground">Este resultado foi gerado por uma versão anterior do Simplexnator e não contém os indicadores detalhados. Resolva o problema novamente para obtê-los.</p></Section>}
+
       <div className="grid gap-5 md:grid-cols-2">
         <RoundBox title="Arredondamento simples" r={rd.simple} frac={showFrac} />
         <RoundBox title="Melhor piso/teto viável" r={rd.neighbor} frac={showFrac} />
@@ -101,6 +100,14 @@ export default function IntegerPage() {
         <Section title="Representação gráfica da solução inteira" description="Pontos inteiros viáveis, ótimo contínuo, arredondamento e solução inteira ótima.">
           <div className="mb-4"><LayerChips layers={layers} onChange={setLayers} only={['region', 'constraints', 'ints', 'optimum', 'rounding', 'intOpt']} /></div>
           <Suspense fallback={<Skeleton className="h-[460px]" />}><PlotGraph g={res.graph} layers={layers} height={460} /></Suspense>
+        </Section>
+      )}
+
+      <IncumbentSection bb={bb} variables={res.variables} frac={showFrac} />
+
+      {bb.stats && (
+        <Section title="Tabela de nós" description="Todos os nós gerados pelo algoritmo. Selecione um nó para consultar o tableau final da sua relaxação e, se desejar, todas as iterações.">
+          <BBNodeTable bb={bb} problem={solvedProblem} frac={showFrac} />
         </Section>
       )}
 

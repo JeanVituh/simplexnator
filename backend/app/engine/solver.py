@@ -34,7 +34,7 @@ def standard_info(res):
     return {"columns": t.names, "kinds": t.kinds, "notes": notes}
 
 
-def solve_problem(lp: LP, method: str = "bigm", integer: str = "all", node_limit: int = 2000) -> dict:
+def solve_problem(lp: LP, method: str = "bigm", integer: str = "all", node_limit: int = 2000, tableau_limit: int = 150) -> dict:
     names = [v.name for v in lp.vars]
     relax = solve_lp(lp, method, True)
     out = {"method": method, "method_used": relax.method_used, "sense": lp.sense, "variables": names,
@@ -68,7 +68,7 @@ def solve_problem(lp: LP, method: str = "bigm", integer: str = "all", node_limit
         int_idx = {j for j, v in enumerate(lp.vars) if integer == "all" or v.kind in ("integer", "binary")}
         if int_idx:
             rounding = round_solution(lp, relax.x, int_idx)
-            bb = branch_and_bound(lp, int_idx, node_limit, "bigm")
+            bb = branch_and_bound(lp, int_idx, node_limit, "bigm", tableau_limit)
             out["integer"] = {"scope": integer, "variables": [lp.vars[j].name for j in sorted(int_idx)], "rounding": rounding, "branch_and_bound": bb,
                               "relaxation_is_integer": all(relax.x[j].denominator == 1 for j in int_idx)}
             if not rounding["simple"]["feasible"]:
@@ -78,4 +78,13 @@ def solve_problem(lp: LP, method: str = "bigm", integer: str = "all", node_limit
     else:
         out["integer"] = {"available": False, "reason": "Sem solução ótima contínua." if not opt else "Resolução inteira desativada."}
     out["graph"] = build_graph(lp, relax, rounding, bb, out["multiple"]) if len(lp.vars) == 2 else None
+    return out
+
+
+def solve_node(lp: LP, lower: list, upper: list, method: str = "bigm") -> dict:
+    """Resolve novamente a relaxação de um nó do Branch and Bound, com todas as iterações (consulta sob demanda)."""
+    names = [v.name for v in lp.vars]
+    res = solve_lp(lp.with_bounds(lower, upper), method, record=True)
+    out = _res_dict(res, names)
+    out["standard_form"] = standard_info(res)
     return out

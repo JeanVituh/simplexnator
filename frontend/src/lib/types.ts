@@ -45,14 +45,26 @@ export interface Multiple {
 }
 
 export interface Rounding { x: Num[]; z: Num; feasible: boolean; violations: string[] }
+export interface BBBound { var: string; op: '<=' | '>='; value: number }
+export type BBDecision = 'branched' | 'integer' | 'infeasible' | 'unbounded' | 'pruned_bound' | 'node_limit'
 export interface BBNode {
   id: number; parent: number | null; depth: number; branch: string; status: string | null
-  z: Num | null; x: Num[] | null; decision: 'branched' | 'integer' | 'infeasible' | 'unbounded' | 'pruned_bound' | null
+  z: Num | null; x: Num[] | null; decision: BBDecision | null
   branch_var: string | null; note: string; iterations?: number
+  // Detalhamento (versão 1.2; ausente em resultados gerados pela versão 1.1)
+  constraints?: string[]; bound?: BBBound | null; bounds?: { lower: (string | null)[]; upper: (string | null)[] }
+  branch_value?: Num | null; floor?: number | null; ceil?: number | null; pivots?: number; tableau?: Snapshot | null
+}
+export interface BBStats {
+  explored: number; branched: number; infeasible: number; unbounded: number; pruned_bound: number; integer_nodes: number; pending: number
+  max_depth: number; total_pivots: number; root_z: Num | null; incumbent_z: Num | null; gap: Num | null
+  root_integral: boolean; final_status: 'root_integral' | 'proven' | 'node_limit' | 'no_integer'; proven_optimal: boolean
+  branching_rule: string; search_order: string
 }
 export interface BranchAndBound {
   status: string; nodes: BBNode[]; explored: number; node_limit: number; node_limit_hit: boolean
   incumbent: { x: Num[]; z: Num; node: number } | null; proven_optimal: boolean
+  stats?: BBStats; incumbent_node?: number | null; incumbent_iterations?: Snapshot[]; tableau_limit?: number
 }
 export interface IntegerAvailable {
   available?: undefined; scope: string; variables: string[]; relaxation_is_integer: boolean
@@ -95,4 +107,6 @@ export interface SolveResponse {
   integer: IntegerInfo; graph: GraphData | null; warnings: string[]
 }
 
+export interface ProjectRef { id: string; name: string }
+export interface NodeIterations { status: LPResult['status']; message: string; variables: string[]; x: Num[] | null; z: Num | null; iterations: Snapshot[]; pivots: number }
 export interface HistoryItem { id: string; date: string; problem: Problem; method: Method; integer: IntegerMode; summary: string }

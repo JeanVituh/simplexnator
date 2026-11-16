@@ -19,6 +19,7 @@ class Settings:
     max_variables = _int("MAX_VARIABLES", 12)
     max_constraints = _int("MAX_CONSTRAINTS", 20)
     bb_node_limit = _int("BB_NODE_LIMIT", 2000)
+    bb_tableau_limit = _int("BB_TABLEAU_LIMIT", 150)
     cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if o.strip()]
 
 

@@ -9,11 +9,14 @@ import IntegerPage from '@/pages/Integer'
 import Dual from '@/pages/Dual'
 import Results from '@/pages/Results'
 import Projects from '@/pages/Projects'
+import Account from '@/pages/Account'
 import { AppProvider } from '@/store'
 import { ToastProvider } from '@/components/ui/toast'
+import { CloudProvider } from '@/lib/cloudContext'
+import type { CloudBackend } from '@/lib/cloud'
 
-export function AppProviders({ children }: { children: ReactNode }) {
-  return <ToastProvider><AppProvider>{children}</AppProvider></ToastProvider>
+export function AppProviders({ children, backend }: { children: ReactNode; backend?: CloudBackend }) {
+  return <ToastProvider><AppProvider><CloudProvider backend={backend}>{children}</CloudProvider></AppProvider></ToastProvider>
 }
 
 export function AppRoutes() {
@@ -28,6 +31,7 @@ export function AppRoutes() {
         <Route path="dual" element={<Dual />} />
         <Route path="resultados" element={<Results />} />
         <Route path="projetos" element={<Projects />} />
+        <Route path="conta" element={<Account />} />
         <Route path="*" element={<Home />} />
       </Route>
     </Routes>

@@ -1,4 +1,4 @@
-import type { Example, IntegerMode, Method, Problem, SolveResponse } from './types'
+import type { BBNode, Example, IntegerMode, Method, NodeIterations, Problem, SolveResponse } from './types'
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
 
@@ -23,5 +23,15 @@ export async function solveProblem(problem: Problem, method: Method, integer: In
 
 export async function fetchExamples(): Promise<Example[]> {
   const res = await fetch(`${BASE}/api/examples`).catch(() => { throw new Error('Servidor de cálculo indisponível.') })
+  return parse(res)
+}
+
+/** Iterações completas da relaxação de um nó do Branch and Bound (consulta sob demanda). */
+export async function fetchNodeIterations(problem: Problem, node: BBNode, method: Method = 'bigm'): Promise<NodeIterations> {
+  if (!node.bounds) throw new Error('Este resultado foi gerado por uma versão anterior. Resolva o problema novamente para consultar os nós.')
+  const res = await fetch(`${BASE}/api/bb/node`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ problem, method, lower: node.bounds.lower, upper: node.bounds.upper }),
+  }).catch(() => { throw new Error('Não foi possível conectar ao servidor de cálculo. Verifique se o backend está em execução.') })
   return parse(res)
 }
